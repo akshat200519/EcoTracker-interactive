@@ -2,8 +2,9 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { ButtonProps } from "@/components/ui/button";
 
-interface AnimatedButtonProps extends React.ComponentProps<typeof Button> {
+interface AnimatedButtonProps extends Omit<ButtonProps, 'variant'> {
   variant?: "default" | "shine" | "outline" | "secondary" | "destructive" | "ghost" | "link";
   size?: "default" | "sm" | "lg" | "icon";
   children: React.ReactNode;
@@ -12,10 +13,13 @@ interface AnimatedButtonProps extends React.ComponentProps<typeof Button> {
 
 const AnimatedButton = React.forwardRef<HTMLButtonElement, AnimatedButtonProps>(
   ({ variant = "default", size = "default", children, className, ...props }, ref) => {
+    // Convert "shine" variant to "default" for the base Button component
+    const buttonVariant = variant === "shine" ? "default" : variant;
+    
     return (
       <Button
         ref={ref}
-        variant={variant === "shine" ? "default" : variant}
+        variant={buttonVariant}
         size={size}
         className={cn(
           "relative overflow-hidden transition-all duration-300",

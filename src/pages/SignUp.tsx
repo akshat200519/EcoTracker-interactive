@@ -81,11 +81,11 @@ const SignUp = () => {
         description: "Welcome to EcoTracker. Your journey towards sustainability starts now.",
       });
       navigate("/dashboard");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Signup error:", error);
       toast({
         title: "Sign up failed",
-        description: "There was an error creating your account. Please try again.",
+        description: error.message || "There was an error creating your account. Please try again.",
         variant: "destructive",
       });
     } finally {

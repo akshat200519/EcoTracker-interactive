@@ -2,9 +2,10 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
 
 interface User {
-  id: string;
+  _id: string;
   email: string;
-  name?: string;
+  name: string;
+  token: string;
 }
 
 interface AuthContextType {
@@ -12,7 +13,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, name?: string) => Promise<void>;
+  signup: (email: string, password: string, name: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -30,6 +31,9 @@ interface AuthProviderProps {
   children: React.ReactNode;
 }
 
+// API URL - should come from environment variable in a real app
+const API_URL = 'http://localhost:5000/api/users';
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -44,55 +48,53 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const login = async (email: string, password: string) => {
-    // In a real app, you would validate credentials with your backend
-    // For demo purposes, we'll simulate a successful login
     setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      const response = await fetch(`${API_URL}/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
       
-      // For demo, accept any email/password with simple validation
-      if (!email.includes("@") || password.length < 6) {
-        throw new Error("Invalid credentials");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Login failed');
       }
       
-      const newUser = {
-        id: Math.random().toString(36).substring(2, 11),
-        email,
-        name: email.split("@")[0],
-      };
-      
-      setUser(newUser);
-      localStorage.setItem("ecotracker-user", JSON.stringify(newUser));
+      const userData = await response.json();
+      setUser(userData);
+      localStorage.setItem("ecotracker-user", JSON.stringify(userData));
     } catch (error) {
+      console.error('Login error:', error);
       throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const signup = async (email: string, password: string, name?: string) => {
-    // In a real app, you would create a new user in your backend
-    // For demo purposes, we'll simulate a successful signup
+  const signup = async (email: string, password: string, name: string) => {
     setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      const response = await fetch(`${API_URL}/signup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name, email, password }),
+      });
       
-      // Validate email and password
-      if (!email.includes("@") || password.length < 6) {
-        throw new Error("Invalid credentials");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Signup failed');
       }
       
-      const newUser = {
-        id: Math.random().toString(36).substring(2, 11),
-        email,
-        name: name || email.split("@")[0],
-      };
-      
-      setUser(newUser);
-      localStorage.setItem("ecotracker-user", JSON.stringify(newUser));
+      const userData = await response.json();
+      setUser(userData);
+      localStorage.setItem("ecotracker-user", JSON.stringify(userData));
     } catch (error) {
+      console.error('Signup error:', error);
       throw error;
     } finally {
       setIsLoading(false);

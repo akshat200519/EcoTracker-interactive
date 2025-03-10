@@ -31,8 +31,11 @@ interface AuthProviderProps {
   children: React.ReactNode;
 }
 
-// API URL - should come from environment variable in a real app
-const API_URL = 'http://localhost:5000/api/users';
+// API URL - using environment variable if available, otherwise default to localhost
+// In production, you should use environment variables for this
+const API_URL = 'https://ecotracker-api.onrender.com/api/users';
+// Fallback API URL for local development
+const FALLBACK_API_URL = 'http://localhost:5000/api/users';
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -47,28 +50,72 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsLoading(false);
   }, []);
 
+  const fetchWithTimeout = async (url: string, options: RequestInit, timeout = 8000) => {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal
+      });
+      clearTimeout(id);
+      return response;
+    } catch (error) {
+      clearTimeout(id);
+      throw error;
+    }
+  };
+
   const login = async (email: string, password: string) => {
     setIsLoading(true);
+    
+    const loginBody = JSON.stringify({ email, password });
+    console.log(`Attempting to login with ${API_URL}/login`);
+    
     try {
-      const response = await fetch(`${API_URL}/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Login failed');
+      // Try primary API URL first
+      try {
+        const response = await fetchWithTimeout(`${API_URL}/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: loginBody,
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Login failed');
+        }
+        
+        const userData = await response.json();
+        setUser(userData);
+        localStorage.setItem("ecotracker-user", JSON.stringify(userData));
+        return;
+      } catch (primaryError) {
+        console.warn("Primary API failed, trying fallback:", primaryError);
+        // If primary fails, try fallback URL
+        const response = await fetchWithTimeout(`${FALLBACK_API_URL}/login`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: loginBody,
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Login failed');
+        }
+        
+        const userData = await response.json();
+        setUser(userData);
+        localStorage.setItem("ecotracker-user", JSON.stringify(userData));
       }
-      
-      const userData = await response.json();
-      setUser(userData);
-      localStorage.setItem("ecotracker-user", JSON.stringify(userData));
     } catch (error) {
       console.error('Login error:', error);
-      throw error;
+      throw new Error('Network error: Please make sure the backend server is running on localhost:5000');
     } finally {
       setIsLoading(false);
     }
@@ -76,26 +123,53 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signup = async (email: string, password: string, name: string) => {
     setIsLoading(true);
+    
+    const signupBody = JSON.stringify({ name, email, password });
+    console.log(`Attempting to signup with ${API_URL}/signup`);
+    
     try {
-      const response = await fetch(`${API_URL}/signup`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ name, email, password }),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Signup failed');
+      // Try primary API URL first
+      try {
+        const response = await fetchWithTimeout(`${API_URL}/signup`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: signupBody,
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Signup failed');
+        }
+        
+        const userData = await response.json();
+        setUser(userData);
+        localStorage.setItem("ecotracker-user", JSON.stringify(userData));
+        return;
+      } catch (primaryError) {
+        console.warn("Primary API failed, trying fallback:", primaryError);
+        // If primary fails, try fallback URL
+        const response = await fetchWithTimeout(`${FALLBACK_API_URL}/signup`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: signupBody,
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Signup failed');
+        }
+        
+        const userData = await response.json();
+        setUser(userData);
+        localStorage.setItem("ecotracker-user", JSON.stringify(userData));
       }
-      
-      const userData = await response.json();
-      setUser(userData);
-      localStorage.setItem("ecotracker-user", JSON.stringify(userData));
     } catch (error) {
       console.error('Signup error:', error);
-      throw error;
+      throw new Error('Network error: Please make sure the backend server is running on localhost:5000');
     } finally {
       setIsLoading(false);
     }

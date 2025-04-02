@@ -4,11 +4,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { ResponsiveContainer, PieChart, Pie, Cell, Legend, Tooltip } from "recharts";
 import GlassmorphicCard from "@/components/ui-custom/GlassmorphicCard";
+import { Tables } from "@/integrations/supabase/schema";
 
 // Colors for different categories
 const COLORS = ["#8884d8", "#82ca9d", "#ffc658", "#ff8042"];
 const CATEGORIES = ["electricity", "transportation", "water", "diet"];
-const CATEGORY_NAMES = {
+const CATEGORY_NAMES: Record<string, string> = {
   electricity: "Electricity",
   transportation: "Transportation",
   water: "Water",
@@ -29,9 +30,9 @@ const CarbonScore = () => {
       try {
         // Get all user's carbon logs
         const { data, error } = await supabase
-          .from("carbon_logs")
-          .select("*")
-          .eq("user_id", user.id)
+          .from('carbon_logs')
+          .select('*')
+          .eq('user_id', user.id)
           .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -59,7 +60,7 @@ const CarbonScore = () => {
 
         // Format data for the pie chart
         const chartData = Object.keys(categoryTotals).map(category => ({
-          name: CATEGORY_NAMES[category as keyof typeof CATEGORY_NAMES],
+          name: CATEGORY_NAMES[category],
           value: categoryTotals[category]
         })).filter(item => item.value > 0);
 

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import GlassmorphicCard from "@/components/ui-custom/GlassmorphicCard";
+import { Tables } from "@/integrations/supabase/schema";
 
 // General sustainability tips
 const GENERAL_TIPS = [
@@ -73,9 +74,9 @@ const SustainabilityTips = () => {
       try {
         // Get all user's carbon logs
         const { data, error } = await supabase
-          .from("carbon_logs")
-          .select("category, carbon_impact")
-          .eq("user_id", user.id);
+          .from('carbon_logs')
+          .select('category, carbon_impact')
+          .eq('user_id', user.id);
 
         if (error) throw error;
 

@@ -6,11 +6,12 @@ import { format } from "date-fns";
 import GlassmorphicCard from "@/components/ui-custom/GlassmorphicCard";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { Tables } from "@/integrations/supabase/schema";
 
 const CarbonActivityHistory = ({ onUpdate }: { onUpdate?: () => void }) => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [activities, setActivities] = useState<any[]>([]);
+  const [activities, setActivities] = useState<Tables['carbon_logs'][]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const loadActivities = async () => {
@@ -19,10 +20,10 @@ const CarbonActivityHistory = ({ onUpdate }: { onUpdate?: () => void }) => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
-        .from("carbon_logs")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+        .from('carbon_logs')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       
@@ -41,9 +42,9 @@ const CarbonActivityHistory = ({ onUpdate }: { onUpdate?: () => void }) => {
   const handleDelete = async (id: string) => {
     try {
       const { error } = await supabase
-        .from("carbon_logs")
+        .from('carbon_logs')
         .delete()
-        .eq("id", id);
+        .eq('id', id);
 
       if (error) throw error;
       

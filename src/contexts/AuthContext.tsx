@@ -3,10 +3,11 @@ import React, { createContext, useState, useContext, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { User } from "@supabase/supabase-js";
+import { Tables } from "@/integrations/supabase/schema";
 
 interface AuthContextType {
   user: User | null;
-  profile: any | null;
+  profile: Tables['profiles'] | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
@@ -30,7 +31,7 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<any | null>(null);
+  const [profile, setProfile] = useState<Tables['profiles'] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 

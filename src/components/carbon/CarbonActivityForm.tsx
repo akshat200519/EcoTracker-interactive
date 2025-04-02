@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import GlassmorphicCard from "@/components/ui-custom/GlassmorphicCard";
+import { Tables } from "@/integrations/supabase/schema";
 
 // Define emissions factors for different activities (simplified values for demo)
 const EMISSION_FACTORS = {
@@ -136,14 +137,16 @@ const CarbonActivityForm = ({ onSuccess }: { onSuccess?: () => void }) => {
     try {
       const carbonImpact = calculateCarbonImpact(data);
       
-      const { error } = await supabase.from("carbon_logs").insert({
-        user_id: user.id,
-        category: data.category,
-        activity: data.activity,
-        quantity: Number(data.quantity),
-        unit: data.unit,
-        carbon_impact: carbonImpact,
-      });
+      const { error } = await supabase
+        .from('carbon_logs')
+        .insert({
+          user_id: user.id,
+          category: data.category,
+          activity: data.activity,
+          quantity: Number(data.quantity),
+          unit: data.unit,
+          carbon_impact: carbonImpact,
+        });
 
       if (error) throw error;
 

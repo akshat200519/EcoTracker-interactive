@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -35,26 +34,33 @@ const GlobalComparison = () => {
       try {
         setLoading(true);
         
-        // This query would typically be handled by a server-side function in a real app
-        // For demo purposes, we're using a client-side approach with some limitations
-        const { data: carbonData, error } = await supabase
+        // First, fetch all carbon logs
+        const { data: carbonData, error: carbonError } = await supabase
           .from('carbon_logs')
-          .select(`
-            user_id,
-            carbon_impact,
-            profiles:user_id(name)
-          `)
-          .order('created_at', { ascending: false });
+          .select('user_id, carbon_impact');
           
-        if (error) throw error;
+        if (carbonError) throw carbonError;
+        
+        // Then, fetch all profiles to get user names
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, name');
+          
+        if (profilesError) throw profilesError;
+        
+        // Create a map of user IDs to names for quick lookup
+        const userNameMap: Record<string, string | null> = {};
+        profilesData.forEach((profile) => {
+          userNameMap[profile.id] = profile.name;
+        });
         
         // Process the data to get user rankings
         const userTotals: Record<string, { total: number, name: string | null }> = {};
         
-        carbonData?.forEach(item => {
+        carbonData.forEach(item => {
           const userId = item.user_id;
           const impact = item.carbon_impact || 0;
-          const name = item.profiles?.name || null;
+          const name = userNameMap[userId] || null;
           
           if (!userTotals[userId]) {
             userTotals[userId] = { total: 0, name };

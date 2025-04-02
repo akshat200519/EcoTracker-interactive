@@ -1,20 +1,17 @@
 
 import React, { createContext, useState, useContext, useEffect } from "react";
-
-interface User {
-  _id: string;
-  email: string;
-  name: string;
-  token: string;
-}
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { User } from "@supabase/supabase-js";
 
 interface AuthContextType {
   user: User | null;
+  profile: any | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, name: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,91 +28,88 @@ interface AuthProviderProps {
   children: React.ReactNode;
 }
 
-// API URL - using environment variable if available, otherwise default to localhost
-// In production, you should use environment variables for this
-const API_URL = 'https://ecotracker-api.onrender.com/api/users';
-// Fallback API URL for local development
-const FALLBACK_API_URL = 'http://localhost:5000/api/users';
-
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
-  useEffect(() => {
-    // Check for saved user in localStorage
-    const savedUser = localStorage.getItem("ecotracker-user");
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-    setIsLoading(false);
-  }, []);
-
-  const fetchWithTimeout = async (url: string, options: RequestInit, timeout = 8000) => {
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), timeout);
-    
+  const fetchProfile = async (userId: string) => {
     try {
-      const response = await fetch(url, {
-        ...options,
-        signal: controller.signal
-      });
-      clearTimeout(id);
-      return response;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error("Error fetching profile:", error);
+        return null;
+      }
+
+      return data;
     } catch (error) {
-      clearTimeout(id);
-      throw error;
+      console.error("Error in fetchProfile:", error);
+      return null;
     }
   };
 
+  useEffect(() => {
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          const profileData = await fetchProfile(session.user.id);
+          setProfile(profileData);
+        } else {
+          setProfile(null);
+        }
+        
+        setIsLoading(false);
+      }
+    );
+
+    // Check for existing session
+    const initializeAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        const profileData = await fetchProfile(session.user.id);
+        setProfile(profileData);
+      }
+      
+      setIsLoading(false);
+    };
+
+    initializeAuth();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
   const login = async (email: string, password: string) => {
     setIsLoading(true);
-    
-    const loginBody = JSON.stringify({ email, password });
-    console.log(`Attempting to login with ${API_URL}/login`);
-    
     try {
-      // Try primary API URL first
-      try {
-        const response = await fetchWithTimeout(`${API_URL}/login`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: loginBody,
-        });
-        
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Login failed');
-        }
-        
-        const userData = await response.json();
-        setUser(userData);
-        localStorage.setItem("ecotracker-user", JSON.stringify(userData));
-        return;
-      } catch (primaryError) {
-        console.warn("Primary API failed, trying fallback:", primaryError);
-        // If primary fails, try fallback URL
-        const response = await fetchWithTimeout(`${FALLBACK_API_URL}/login`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: loginBody,
-        });
-        
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Login failed');
-        }
-        
-        const userData = await response.json();
-        setUser(userData);
-        localStorage.setItem("ecotracker-user", JSON.stringify(userData));
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        throw error;
       }
-    } catch (error) {
-      console.error('Login error:', error);
-      throw new Error('Network error: Please make sure the backend server is running on localhost:5000');
+
+      if (data.user) {
+        const profileData = await fetchProfile(data.user.id);
+        setProfile(profileData);
+      }
+    } catch (error: any) {
+      console.error("Login error:", error);
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -123,72 +117,59 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signup = async (email: string, password: string, name: string) => {
     setIsLoading(true);
-    
-    const signupBody = JSON.stringify({ name, email, password });
-    console.log(`Attempting to signup with ${API_URL}/signup`);
-    
     try {
-      // Try primary API URL first
-      try {
-        const response = await fetchWithTimeout(`${API_URL}/signup`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: signupBody,
-        });
-        
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Signup failed');
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name
+          }
         }
-        
-        const userData = await response.json();
-        setUser(userData);
-        localStorage.setItem("ecotracker-user", JSON.stringify(userData));
-        return;
-      } catch (primaryError) {
-        console.warn("Primary API failed, trying fallback:", primaryError);
-        // If primary fails, try fallback URL
-        const response = await fetchWithTimeout(`${FALLBACK_API_URL}/signup`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: signupBody,
-        });
-        
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Signup failed');
-        }
-        
-        const userData = await response.json();
-        setUser(userData);
-        localStorage.setItem("ecotracker-user", JSON.stringify(userData));
+      });
+
+      if (error) {
+        throw error;
       }
-    } catch (error) {
-      console.error('Signup error:', error);
-      throw new Error('Network error: Please make sure the backend server is running on localhost:5000');
+
+      // Profile will be created automatically via database trigger
+    } catch (error: any) {
+      console.error("Signup error:", error);
+      throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem("ecotracker-user");
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      setProfile(null);
+      toast({
+        title: "Logged out successfully",
+        description: "You have been logged out of your account."
+      });
+    } catch (error: any) {
+      console.error("Logout error:", error);
+      toast({
+        title: "Logout failed",
+        description: error.message || "An error occurred during logout.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
+        profile,
         isLoading,
         isAuthenticated: !!user,
         login,
         signup,
-        logout,
+        logout
       }}
     >
       {children}

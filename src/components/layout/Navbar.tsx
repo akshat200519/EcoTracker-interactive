@@ -90,9 +90,21 @@ const Navbar = () => {
           </Link>
           
           <nav className="hidden md:flex items-center space-x-8">
-            <NavLink to="/dashboard" active={isActive("/dashboard")}>Dashboard</NavLink>
-            <NavLink to="/global-comparison" active={isActive("/global-comparison")}>Global Comparison</NavLink>
-            <NavLink to="/friends-comparison" active={isActive("/friends-comparison")}>Friends & Comparison</NavLink>
+            {isAuthenticated ? (
+              // Authenticated navigation links
+              <>
+                <NavLink to="/dashboard" active={isActive("/dashboard")}>Dashboard</NavLink>
+                <NavLink to="/global-comparison" active={isActive("/global-comparison")}>Global Comparison</NavLink>
+                <NavLink to="/friends-comparison" active={isActive("/friends-comparison")}>Friends & Comparison</NavLink>
+              </>
+            ) : (
+              // Non-authenticated navigation links
+              <>
+                <NavLink to="/" active={isActive("/")}>Home</NavLink>
+                <NavLink to="/about" active={isActive("/about")}>About</NavLink>
+                <NavLink to="/contact" active={isActive("/contact")}>Contact</NavLink>
+              </>
+            )}
           </nav>
           
           <div className="flex items-center space-x-4">

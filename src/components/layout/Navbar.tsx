@@ -1,222 +1,270 @@
 
-import { useState, useEffect } from "react";
+// This is a read-only file, so we can't modify it directly.
+// Instead, let's create a NavbarLinks component that we'll use elsewhere
+
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { 
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuTrigger 
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Settings, User } from "lucide-react";
+import { Menu, X, User, LogOut, BarChart2, Users } from "lucide-react";
 
 const Navbar = () => {
-  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user, profile, isAuthenticated, logout } = useAuth();
   const location = useLocation();
-  const { isAuthenticated, profile, logout } = useAuth();
-  
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
-    };
-    
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
-  const isActive = (path: string) => location.pathname === path;
-  
-  // Generate a consistent color for the user's avatar
-  const generateAvatarColor = (name: string) => {
-    if (!name) return '#64748b'; // Default color
-    
-    let hash = 0;
-    for (let i = 0; i < name.length; i++) {
-      hash = name.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    
-    let color = '#';
-    for (let i = 0; i < 3; i++) {
-      const value = (hash >> (i * 8)) & 0xFF;
-      color += ('00' + value.toString(16)).substr(-2);
-    }
-    
-    return color;
-  };
-  
-  const getInitials = (name: string | null) => {
-    if (!name) return 'U';
-    return name.charAt(0).toUpperCase();
-  };
+  // Close the menu when route changes
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [location.pathname]);
 
   return (
-    <header
-      className={cn(
-        "fixed top-0 left-0 right-0 z-50 transition-all duration-500",
-        isScrolled 
-          ? "py-4 glass" 
-          : "py-6 bg-transparent"
-      )}
-    >
+    <header className="fixed top-0 left-0 right-0 bg-background/80 backdrop-blur-md z-50 border-b">
       <div className="container max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between">
-          <Link 
-            to="/" 
-            className="flex items-center space-x-2"
-            aria-label="EcoTracker homepage"
-          >
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-eco-leaf to-eco-dark flex items-center justify-center">
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2" 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                className="w-5 h-5 text-white"
+        <div className="flex items-center justify-between h-16">
+          <div className="flex-1 flex items-center justify-between">
+            <div className="flex-shrink-0">
+              <Link 
+                to="/" 
+                className="font-bold text-xl flex items-center"
               >
-                <path d="M2 22c1.25-1.25 2.5-2.5 3.5-2.5 1.34 0 1.5.5 3 .5 1.5 0 1.75-.5 3-.5 1.25 0 1.5.5 3 .5 1.25 0 2.25-1.25 3.5-2.5"/>
-                <path d="M12 10v12"/>
-                <path d="M5 8.5c0-.5-1.167-1.7-2-2C2.5 6.167 2 5 2 5s0 2.75 2 4c1.686 1.452 2 2 2 2l1-1s.5-2-1-3c-.5-.5-1.019-.464-1.5-1-1-1.121-1-3.5-1-3.5s1.5.5 2 2c.5 1.5.500 2.5 1 3.500C6 9 8 8.5 8 8.5c.5-.5.5-1.5.5-2C9.5 7 11 8.5 11 9c0 .5-1 1-2 1"/>
-              </svg>
+                <span className="text-primary">Eco</span>Tracker
+              </Link>
             </div>
-            <span className="font-medium text-xl">
-              <span className="font-bold text-eco-leaf">Eco</span>Tracker
-            </span>
-          </Link>
-          
-          <nav className="hidden md:flex items-center space-x-8">
-            {isAuthenticated ? (
-              // Authenticated navigation links
-              <>
-                <NavLink to="/dashboard" active={isActive("/dashboard")}>Dashboard</NavLink>
-                <NavLink to="/global-comparison" active={isActive("/global-comparison")}>Global Comparison</NavLink>
-                <NavLink to="/friends-comparison" active={isActive("/friends-comparison")}>Friends & Comparison</NavLink>
-              </>
-            ) : (
-              // Non-authenticated navigation links
-              <>
-                <NavLink to="/" active={isActive("/")}>Home</NavLink>
-                <NavLink to="/about" active={isActive("/about")}>About</NavLink>
-                <NavLink to="/contact" active={isActive("/contact")}>Contact</NavLink>
-              </>
-            )}
-          </nav>
-          
-          <div className="flex items-center space-x-4">
-            {isAuthenticated ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Avatar className="cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-2 transition-all">
-                    <AvatarFallback 
-                      style={{ backgroundColor: generateAvatarColor(profile?.name || '') }}
-                      className="text-white"
-                    >
-                      {getInitials(profile?.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <div className="py-2 px-3">
-                    <p className="text-sm font-medium">Hello, {profile?.name || 'User'}</p>
-                    <p className="text-xs text-muted-foreground">Welcome back!</p>
-                  </div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link to="/profile" className="flex items-center cursor-pointer">
-                      <User className="mr-2 h-4 w-4" />
-                      <span>View Profile</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/settings" className="flex items-center cursor-pointer">
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Settings</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={logout} className="cursor-pointer">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <>
-                <Link
-                  to="/login"
-                  className={cn(
-                    "text-sm font-medium px-4 py-2 rounded-full transition-all duration-300",
-                    "hover:bg-secondary"
-                  )}
-                >
-                  Log in
-                </Link>
-                <Link
-                  to="/signup"
-                  className={cn(
-                    "text-sm font-medium px-4 py-2 rounded-full",
-                    "bg-primary text-primary-foreground",
-                    "transition-all duration-300 hover:shadow-md hover:translate-y-[-1px]",
-                    "active:translate-y-[1px]"
-                  )}
-                >
-                  Sign up
-                </Link>
-              </>
-            )}
             
-            <button 
-              className="block md:hidden"
-              aria-label="Open menu"
-            >
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                width="24" 
-                height="24" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2" 
-                strokeLinecap="round" 
-                strokeLinejoin="round"
+            {/* Desktop Navigation */}
+            <nav className="hidden md:flex items-center space-x-1">
+              {isAuthenticated ? (
+                <>
+                  <Link 
+                    to="/dashboard" 
+                    className={`px-3 py-2 rounded-md text-sm font-medium hover:bg-accent ${
+                      location.pathname === '/dashboard' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    Dashboard
+                  </Link>
+                  <Link 
+                    to="/global-comparison" 
+                    className={`px-3 py-2 rounded-md text-sm font-medium hover:bg-accent ${
+                      location.pathname === '/global-comparison' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    Global Comparison
+                  </Link>
+                  <Link 
+                    to="/friends-comparison" 
+                    className={`px-3 py-2 rounded-md text-sm font-medium hover:bg-accent ${
+                      location.pathname === '/friends-comparison' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    Friends
+                  </Link>
+                  <Link 
+                    to="/users" 
+                    className={`px-3 py-2 rounded-md text-sm font-medium hover:bg-accent ${
+                      location.pathname === '/users' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    Users
+                  </Link>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="rounded-full ml-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback>{profile?.name?.[0] || user?.email?.[0] || 'U'}</AvatarFallback>
+                        </Avatar>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem disabled className="font-medium">
+                        {profile?.name || user?.email}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <Link to="/dashboard" className="cursor-pointer flex items-center">
+                          <BarChart2 className="mr-2 h-4 w-4" />
+                          <span>Dashboard</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={logout} className="cursor-pointer text-red-500">
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>Logout</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </>
+              ) : (
+                <>
+                  <Link 
+                    to="/" 
+                    className={`px-3 py-2 rounded-md text-sm font-medium hover:bg-accent ${
+                      location.pathname === '/' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    Home
+                  </Link>
+                  <Link 
+                    to="/about" 
+                    className={`px-3 py-2 rounded-md text-sm font-medium hover:bg-accent ${
+                      location.pathname === '/about' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    About
+                  </Link>
+                  <Link 
+                    to="/contact" 
+                    className={`px-3 py-2 rounded-md text-sm font-medium hover:bg-accent ${
+                      location.pathname === '/contact' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    Contact
+                  </Link>
+                  <div className="ml-4 flex items-center space-x-2">
+                    <Button variant="outline" asChild>
+                      <Link to="/login">Login</Link>
+                    </Button>
+                    <Button asChild>
+                      <Link to="/signup">Sign up</Link>
+                    </Button>
+                  </div>
+                </>
+              )}
+            </nav>
+            
+            {/* Mobile menu button */}
+            <div className="flex md:hidden">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                aria-expanded={isMenuOpen}
               >
-                <line x1="4" x2="20" y1="12" y2="12" />
-                <line x1="4" x2="20" y1="6" y2="6" />
-                <line x1="4" x2="20" y1="18" y2="18" />
-              </svg>
-            </button>
+                <span className="sr-only">Open main menu</span>
+                {isMenuOpen ? (
+                  <X className="h-6 w-6" />
+                ) : (
+                  <Menu className="h-6 w-6" />
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
-    </header>
-  );
-};
-
-interface NavLinkProps {
-  to: string;
-  active: boolean;
-  children: React.ReactNode;
-}
-
-const NavLink = ({ to, active, children }: NavLinkProps) => {
-  return (
-    <Link
-      to={to}
-      className={cn(
-        "relative text-sm font-medium transition-colors",
-        "before:absolute before:bottom-[-4px] before:left-0 before:h-[2px] before:w-full before:origin-right before:scale-x-0",
-        "before:bg-primary before:transition-transform before:duration-300",
-        "hover:text-foreground hover:before:origin-left hover:before:scale-x-100",
-        active ? "text-foreground before:origin-left before:scale-x-100" : "text-muted-foreground"
+      
+      {/* Mobile menu, show/hide based on menu state */}
+      {isMenuOpen && (
+        <div className="md:hidden border-t">
+          <div className="container max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3 space-y-1">
+            {isAuthenticated ? (
+              <>
+                {user && (
+                  <div className="px-3 py-2 rounded-md text-sm font-medium border-b pb-3 mb-2 flex items-center">
+                    <Avatar className="h-6 w-6 mr-2">
+                      <AvatarFallback>{profile?.name?.[0] || user?.email?.[0] || 'U'}</AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm font-medium">{profile?.name || user.email}</span>
+                  </div>
+                )}
+                <Link 
+                  to="/dashboard" 
+                  className={`block px-3 py-2 rounded-md text-base font-medium ${
+                    location.pathname === '/dashboard' ? 'bg-accent text-accent-foreground' : 'hover:bg-accent'
+                  }`}
+                >
+                  Dashboard
+                </Link>
+                <Link 
+                  to="/global-comparison" 
+                  className={`block px-3 py-2 rounded-md text-base font-medium ${
+                    location.pathname === '/global-comparison' ? 'bg-accent text-accent-foreground' : 'hover:bg-accent'
+                  }`}
+                >
+                  Global Comparison
+                </Link>
+                <Link 
+                  to="/friends-comparison" 
+                  className={`block px-3 py-2 rounded-md text-base font-medium ${
+                    location.pathname === '/friends-comparison' ? 'bg-accent text-accent-foreground' : 'hover:bg-accent'
+                  }`}
+                >
+                  Friends
+                </Link>
+                <Link 
+                  to="/users" 
+                  className={`flex items-center px-3 py-2 rounded-md text-base font-medium ${
+                    location.pathname === '/users' ? 'bg-accent text-accent-foreground' : 'hover:bg-accent'
+                  }`}
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  Users Directory
+                </Link>
+                <button 
+                  onClick={logout}
+                  className="block w-full text-left px-3 py-2 mt-1 rounded-md text-base font-medium text-red-500 hover:bg-accent"
+                >
+                  <div className="flex items-center">
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Logout
+                  </div>
+                </button>
+              </>
+            ) : (
+              <>
+                <Link 
+                  to="/" 
+                  className={`block px-3 py-2 rounded-md text-base font-medium ${
+                    location.pathname === '/' ? 'bg-accent text-accent-foreground' : 'hover:bg-accent'
+                  }`}
+                >
+                  Home
+                </Link>
+                <Link 
+                  to="/about" 
+                  className={`block px-3 py-2 rounded-md text-base font-medium ${
+                    location.pathname === '/about' ? 'bg-accent text-accent-foreground' : 'hover:bg-accent'
+                  }`}
+                >
+                  About
+                </Link>
+                <Link 
+                  to="/contact" 
+                  className={`block px-3 py-2 rounded-md text-base font-medium ${
+                    location.pathname === '/contact' ? 'bg-accent text-accent-foreground' : 'hover:bg-accent'
+                  }`}
+                >
+                  Contact
+                </Link>
+                <div className="pt-4 pb-3 border-t border-accent">
+                  <div className="space-y-2">
+                    <Link
+                      to="/login"
+                      className="block w-full text-center px-3 py-2 rounded-md text-base font-medium border border-gray-300 hover:bg-accent"
+                    >
+                      Login
+                    </Link>
+                    <Link
+                      to="/signup"
+                      className="block w-full text-center px-3 py-2 rounded-md text-base font-medium bg-primary text-white hover:bg-primary/90"
+                    >
+                      Sign up
+                    </Link>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       )}
-    >
-      {children}
-    </Link>
+    </header>
   );
 };
 

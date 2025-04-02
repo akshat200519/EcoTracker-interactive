@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -8,7 +9,8 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Award, Medal } from "lucide-react";
+import { Award, Medal, Users } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 type UserRanking = {
   user_id: string;
@@ -20,9 +22,11 @@ type UserRanking = {
 const GlobalComparison = () => {
   const { user, profile, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [leaderboard, setLeaderboard] = useState<UserRanking[]>([]);
   const [userRanking, setUserRanking] = useState<UserRanking | null>(null);
   const [loading, setLoading] = useState(true);
+  const [userCount, setUserCount] = useState(0);
   
   useEffect(() => {
     if (!isAuthenticated) {
@@ -47,6 +51,9 @@ const GlobalComparison = () => {
           .select('id, name');
           
         if (profilesError) throw profilesError;
+        
+        // Set the user count
+        setUserCount(profilesData.length);
         
         // Create a map of user IDs to names for quick lookup
         const userNameMap: Record<string, string | null> = {};
@@ -94,13 +101,18 @@ const GlobalComparison = () => {
         setUserRanking(currentUserRanking);
       } catch (error) {
         console.error("Error fetching global comparison data:", error);
+        toast({
+          variant: "destructive",
+          title: "Error loading data",
+          description: "Could not load comparison data."
+        });
       } finally {
         setLoading(false);
       }
     };
     
     fetchLeaderboardData();
-  }, [isAuthenticated, navigate, user?.id]);
+  }, [isAuthenticated, navigate, user?.id, toast]);
   
   const getRankingColor = (ranking: number): string => {
     if (ranking === 1) return "text-yellow-500";
@@ -127,7 +139,13 @@ const GlobalComparison = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <h1 className="text-3xl font-bold mb-8">Global Comparison</h1>
+            <div className="flex justify-between items-center mb-8">
+              <h1 className="text-3xl font-bold">Global Comparison</h1>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Users size={18} />
+                <span>{userCount} Users Registered</span>
+              </div>
+            </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
               <div className="lg:col-span-2">
@@ -143,7 +161,7 @@ const GlobalComparison = () => {
                       <div className="flex justify-center py-8">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
                       </div>
-                    ) : (
+                    ) : leaderboard.length > 0 ? (
                       <div className="space-y-4">
                         {leaderboard.map((entry) => (
                           <div 
@@ -176,6 +194,11 @@ const GlobalComparison = () => {
                             </div>
                           </div>
                         ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-12">
+                        <p className="text-muted-foreground">No carbon data available yet.</p>
+                        <p className="text-sm">Start logging activities to appear on the leaderboard!</p>
                       </div>
                     )}
                   </CardContent>

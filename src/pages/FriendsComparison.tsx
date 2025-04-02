@@ -14,8 +14,6 @@ import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Search, UserPlus, Users } from "lucide-react";
 
-// Note: In a real app, we would create a friends table in Supabase
-// For demo purposes, we'll simulate some friends data
 type Friend = {
   id: string;
   name: string;
@@ -45,6 +43,7 @@ const FriendsComparison = () => {
   const [selectedFriend, setSelectedFriend] = useState<FriendComparison | null>(null);
   const [loading, setLoading] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [allUsers, setAllUsers] = useState<{id: string, name: string}[]>([]);
   
   useEffect(() => {
     if (!isAuthenticated) {
@@ -52,31 +51,45 @@ const FriendsComparison = () => {
       return;
     }
     
-    // Simulated friends data for demo purposes
-    // In a real app, this would come from a friends table in Supabase
-    const demoFriends: Friend[] = [
-      {
-        id: "demo-friend-1",
-        name: "Alex Green",
-        carbon_score: 215.5,
-        compared_to_you: -15.2 // Friend is doing 15.2% better than you
-      },
-      {
-        id: "demo-friend-2",
-        name: "Jordan Rivera",
-        carbon_score: 302.8,
-        compared_to_you: 12.3 // Friend is doing 12.3% worse than you
-      },
-      {
-        id: "demo-friend-3",
-        name: "Morgan Taylor",
-        carbon_score: 178.6,
-        compared_to_you: -33.7
+    // Fetch all users from the database
+    const fetchUsers = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, name');
+          
+        if (error) throw error;
+        
+        // Filter out the current user
+        const otherUsers = data?.filter(u => u.id !== user?.id) || [];
+        setAllUsers(otherUsers);
+        
+        // For demo purposes, convert some users to friends with random carbon scores
+        const initialFriends = otherUsers.slice(0, 3).map(u => {
+          const randomScore = Math.floor(Math.random() * 300) + 150;
+          const randomComparison = Math.floor(Math.random() * 60) - 30;
+          
+          return {
+            id: u.id,
+            name: u.name || 'Anonymous User',
+            carbon_score: randomScore,
+            compared_to_you: randomComparison
+          };
+        });
+        
+        setFriendsList(initialFriends);
+      } catch (error) {
+        console.error("Error fetching users:", error);
+        toast({
+          title: "Error loading users",
+          description: "Could not load users from the database.",
+          variant: "destructive"
+        });
       }
-    ];
+    };
     
-    setFriendsList(demoFriends);
-  }, [isAuthenticated, navigate]);
+    fetchUsers();
+  }, [isAuthenticated, navigate, user?.id, toast]);
 
   const handleSearch = async () => {
     if (!searchTerm.trim()) return;
@@ -84,17 +97,17 @@ const FriendsComparison = () => {
     setSearchLoading(true);
     
     try {
-      // In a real app, you would search the profiles table using a fuzzy search
-      // This is a simplified example
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, name')
-        .ilike('name', `%${searchTerm}%`)
-        .limit(5);
+      // Search users by name
+      const filteredUsers = allUsers.filter(user => 
+        user.name?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
       
-      if (error) throw error;
+      // Filter out users that are already friends
+      const newUsers = filteredUsers.filter(user => 
+        !friendsList.some(friend => friend.id === user.id)
+      );
       
-      setSearchResults(data || []);
+      setSearchResults(newUsers);
     } catch (error) {
       console.error("Error searching for users:", error);
       toast({
@@ -108,9 +121,6 @@ const FriendsComparison = () => {
   };
 
   const addFriend = (id: string, name: string) => {
-    // In a real app, you would add this friend to a friends table
-    // For demo purposes, we'll just add it to our local state
-    
     // Check if friend already exists
     if (friendsList.some(friend => friend.id === id)) {
       toast({
@@ -145,8 +155,8 @@ const FriendsComparison = () => {
     setLoading(true);
     
     try {
-      // In a real app, you would fetch actual comparison data from the database
-      // For demo purposes, we're generating random data
+      // In a real app, fetch actual carbon data for this user and friend
+      // For demo, we'll generate realistic comparison data
       
       // Get user's carbon data by category
       const { data: userCarbonData, error: userError } = await supabase
@@ -165,19 +175,37 @@ const FriendsComparison = () => {
         userCategories[log.category] += log.carbon_impact;
       });
       
-      // Generate random friend data for demo purposes
-      // In a real app, this would come from the database
+      // For demo, simulate friend's carbon data based on their carbon_score
+      const friendFromList = friendsList.find(f => f.id === friendId);
+      const friendMultiplier = friendFromList ? 
+        (friendFromList.carbon_score / Object.values(userCategories).reduce((sum, val) => sum + val, 100)) : 0.8;
+      
+      // Generate comparison data
       const categoryComparisons = Object.entries(userCategories).map(([category, impact]) => {
-        const variationFactor = Math.random() * 0.6 + 0.7; // Between 70% and 130%
+        // Slight variation per category for realism
+        const categoryVariation = Math.random() * 0.4 + 0.8; // 0.8 - 1.2
         return {
           category,
           your_impact: impact,
-          friend_impact: impact * variationFactor
+          friend_impact: impact * friendMultiplier * categoryVariation
         };
       });
       
+      // If user has no categories yet, create some sample ones
+      if (categoryComparisons.length === 0) {
+        const sampleCategories = ['transportation', 'food', 'energy', 'waste'];
+        sampleCategories.forEach(category => {
+          const yourImpact = Math.random() * 50 + 30;
+          categoryComparisons.push({
+            category,
+            your_impact: yourImpact,
+            friend_impact: yourImpact * (Math.random() * 0.6 + 0.7)
+          });
+        });
+      }
+      
       // Calculate total scores
-      const yourScore = Object.values(userCategories).reduce((sum, val) => sum + val, 0);
+      const yourScore = categoryComparisons.reduce((sum, item) => sum + item.your_impact, 0);
       const friendScore = categoryComparisons.reduce((sum, item) => sum + item.friend_impact, 0);
       
       setSelectedFriend({
@@ -211,7 +239,13 @@ const FriendsComparison = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <h1 className="text-3xl font-bold mb-8">Friends & Comparison</h1>
+            <div className="flex justify-between items-center mb-8">
+              <h1 className="text-3xl font-bold">Friends & Comparison</h1>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Users size={18} />
+                <span>{allUsers.length} Users Available</span>
+              </div>
+            </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-1 space-y-6">
@@ -225,7 +259,7 @@ const FriendsComparison = () => {
                   <CardContent>
                     <div className="flex gap-2 mb-4">
                       <Input 
-                        placeholder="Search by name or email"
+                        placeholder="Search by name"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -250,12 +284,12 @@ const FriendsComparison = () => {
                               <Avatar className="h-8 w-8">
                                 <AvatarFallback>{result.name?.[0] || 'U'}</AvatarFallback>
                               </Avatar>
-                              <span>{result.name}</span>
+                              <span>{result.name || 'Anonymous User'}</span>
                             </div>
                             <Button 
                               variant="ghost" 
                               size="sm"
-                              onClick={() => addFriend(result.id, result.name || 'Unknown User')}
+                              onClick={() => addFriend(result.id, result.name || 'Anonymous User')}
                             >
                               <UserPlus className="h-4 w-4" />
                             </Button>
@@ -265,7 +299,7 @@ const FriendsComparison = () => {
                     )}
                     
                     <div className="mt-6">
-                      <h3 className="text-sm font-medium text-muted-foreground mb-3">Your Friends</h3>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-3">Your Friends ({friendsList.length})</h3>
                       
                       {friendsList.length > 0 ? (
                         <div className="space-y-2">
@@ -304,7 +338,7 @@ const FriendsComparison = () => {
                           <Users className="h-8 w-8 text-muted-foreground mb-2" />
                           <h4 className="font-medium">No friends yet</h4>
                           <p className="text-sm text-muted-foreground">
-                            Search for friends to add them to your list
+                            Search for users to add them to your friends list
                           </p>
                         </div>
                       )}

@@ -2,10 +2,21 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
+import { LogOut, Settings, User } from "lucide-react";
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const location = useLocation();
+  const { isAuthenticated, profile, logout } = useAuth();
   
   useEffect(() => {
     const handleScroll = () => {
@@ -17,6 +28,29 @@ const Navbar = () => {
   }, []);
 
   const isActive = (path: string) => location.pathname === path;
+  
+  // Generate a consistent color for the user's avatar
+  const generateAvatarColor = (name: string) => {
+    if (!name) return '#64748b'; // Default color
+    
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    
+    let color = '#';
+    for (let i = 0; i < 3; i++) {
+      const value = (hash >> (i * 8)) & 0xFF;
+      color += ('00' + value.toString(16)).substr(-2);
+    }
+    
+    return color;
+  };
+  
+  const getInitials = (name: string | null) => {
+    if (!name) return 'U';
+    return name.charAt(0).toUpperCase();
+  };
 
   return (
     <header
@@ -56,32 +90,73 @@ const Navbar = () => {
           </Link>
           
           <nav className="hidden md:flex items-center space-x-8">
-            <NavLink to="/" active={isActive("/")}>Home</NavLink>
-            <NavLink to="/about" active={isActive("/about")}>About</NavLink>
-            <NavLink to="/contact" active={isActive("/contact")}>Contact</NavLink>
+            <NavLink to="/dashboard" active={isActive("/dashboard")}>Dashboard</NavLink>
+            <NavLink to="/global-comparison" active={isActive("/global-comparison")}>Global Comparison</NavLink>
+            <NavLink to="/friends-comparison" active={isActive("/friends-comparison")}>Friends & Comparison</NavLink>
           </nav>
           
           <div className="flex items-center space-x-4">
-            <Link
-              to="/login"
-              className={cn(
-                "text-sm font-medium px-4 py-2 rounded-full transition-all duration-300",
-                "hover:bg-secondary"
-              )}
-            >
-              Log in
-            </Link>
-            <Link
-              to="/signup"
-              className={cn(
-                "text-sm font-medium px-4 py-2 rounded-full",
-                "bg-primary text-primary-foreground",
-                "transition-all duration-300 hover:shadow-md hover:translate-y-[-1px]",
-                "active:translate-y-[1px]"
-              )}
-            >
-              Sign up
-            </Link>
+            {isAuthenticated ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Avatar className="cursor-pointer hover:ring-2 hover:ring-primary hover:ring-offset-2 transition-all">
+                    <AvatarFallback 
+                      style={{ backgroundColor: generateAvatarColor(profile?.name || '') }}
+                      className="text-white"
+                    >
+                      {getInitials(profile?.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <div className="py-2 px-3">
+                    <p className="text-sm font-medium">Hello, {profile?.name || 'User'}</p>
+                    <p className="text-xs text-muted-foreground">Welcome back!</p>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/profile" className="flex items-center cursor-pointer">
+                      <User className="mr-2 h-4 w-4" />
+                      <span>View Profile</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/settings" className="flex items-center cursor-pointer">
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Settings</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={logout} className="cursor-pointer">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className={cn(
+                    "text-sm font-medium px-4 py-2 rounded-full transition-all duration-300",
+                    "hover:bg-secondary"
+                  )}
+                >
+                  Log in
+                </Link>
+                <Link
+                  to="/signup"
+                  className={cn(
+                    "text-sm font-medium px-4 py-2 rounded-full",
+                    "bg-primary text-primary-foreground",
+                    "transition-all duration-300 hover:shadow-md hover:translate-y-[-1px]",
+                    "active:translate-y-[1px]"
+                  )}
+                >
+                  Sign up
+                </Link>
+              </>
+            )}
             
             <button 
               className="block md:hidden"

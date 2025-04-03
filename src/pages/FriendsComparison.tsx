@@ -33,6 +33,18 @@ type FriendComparison = {
   }[];
 };
 
+// Sample suggested friends that can be added with the Add button
+const SAMPLE_SUGGESTED_FRIENDS = [
+  {
+    id: 'sample-friend-1',
+    name: 'Eco Jessica'
+  },
+  {
+    id: 'sample-friend-2',
+    name: 'Green Robert'
+  }
+];
+
 const FriendsComparison = () => {
   const { user, profile, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -71,7 +83,10 @@ const FriendsComparison = () => {
         const otherUsers = data?.filter(u => u.id !== user?.id) || [];
         console.log(`Found ${otherUsers.length} other users (excluding current user)`);
         
-        setAllUsers(otherUsers);
+        // Add our sample suggested friends
+        const combinedUsers = [...otherUsers, ...SAMPLE_SUGGESTED_FRIENDS];
+        
+        setAllUsers(combinedUsers);
         
         // For demo purposes, convert some users to friends with random carbon scores
         const initialFriends = otherUsers.slice(0, Math.min(3, otherUsers.length)).map(u => {
@@ -102,7 +117,13 @@ const FriendsComparison = () => {
   }, [isAuthenticated, navigate, user?.id, toast]);
 
   const handleSearch = async () => {
-    if (!searchTerm.trim()) return;
+    if (!searchTerm.trim()) {
+      // If search is empty, show sample suggested friends
+      setSearchResults(SAMPLE_SUGGESTED_FRIENDS.filter(user => 
+        !friendsList.some(friend => friend.id === user.id)
+      ));
+      return;
+    }
     
     setSearchLoading(true);
     
@@ -130,6 +151,14 @@ const FriendsComparison = () => {
     }
   };
 
+  // Show sample suggested friends on component mount
+  useEffect(() => {
+    const notAddedSampleFriends = SAMPLE_SUGGESTED_FRIENDS.filter(user => 
+      !friendsList.some(friend => friend.id === user.id)
+    );
+    setSearchResults(notAddedSampleFriends);
+  }, [friendsList]);
+
   const addFriend = (id: string, name: string) => {
     // Check if friend already exists
     if (friendsList.some(friend => friend.id === id)) {
@@ -152,7 +181,9 @@ const FriendsComparison = () => {
     };
     
     setFriendsList(prev => [...prev, newFriend]);
-    setSearchResults([]);
+    
+    // Filter out the added friend from search results
+    setSearchResults(prev => prev.filter(user => user.id !== id));
     setSearchTerm("");
     
     toast({

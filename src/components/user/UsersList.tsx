@@ -118,71 +118,49 @@ export const UsersList = () => {
     });
   };
 
-  const renderContent = () => {
-    if (loading) {
-      return (
-        <div className="flex justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
-      );
-    }
-    
-    if (fetchError) {
-      return (
-        <div className="text-center py-8">
-          <p className="text-destructive mb-2">Error loading user data</p>
-          <p className="text-sm text-muted-foreground">{fetchError}</p>
-          <Button 
-            variant="outline" 
-            className="mt-4"
-            onClick={() => window.location.reload()}
+  // Fix: Properly render Grid View content
+  const renderGridView = () => {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {users.map((userData) => (
+          <div 
+            key={userData.id} 
+            className={`p-4 rounded-lg border ${userData.id === user?.id ? 'bg-secondary/10 border-primary/20' : ''}`}
           >
-            Retry
-          </Button>
-        </div>
-      );
-    }
-    
-    if (view === "grid") {
-      return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {users.map((userData) => (
-            <div 
-              key={userData.id} 
-              className={`p-4 rounded-lg border ${userData.id === user?.id ? 'bg-secondary/10 border-primary/20' : ''}`}
-            >
-              <div className="flex items-center gap-3 mb-3">
-                <Avatar className="h-10 w-10">
-                  <AvatarFallback>{userData.name?.[0] || 'U'}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-medium">
-                    {userData.name || 'Anonymous User'}
-                    {userData.id === user?.id && (
-                      <span className="ml-2 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">You</span>
-                    )}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Joined {formatDate(userData.created_at)}</p>
-                </div>
-              </div>
-              <div className="flex justify-between items-center mt-3">
-                <div className="text-sm">
-                  <span className="text-muted-foreground">Carbon Score:</span>{' '}
-                  <span className="font-medium">{userData.carbon_total?.toFixed(1) || '0'} kg</span>
-                </div>
-                {userData.id !== user?.id && (
-                  <Button variant="ghost" size="sm">
-                    <UserPlus className="h-4 w-4 mr-1" />
-                    Add
-                  </Button>
-                )}
+            <div className="flex items-center gap-3 mb-3">
+              <Avatar className="h-10 w-10">
+                <AvatarFallback>{userData.name?.[0] || 'U'}</AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="font-medium">
+                  {userData.name || 'Anonymous User'}
+                  {userData.id === user?.id && (
+                    <span className="ml-2 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">You</span>
+                  )}
+                </p>
+                <p className="text-xs text-muted-foreground">Joined {formatDate(userData.created_at)}</p>
               </div>
             </div>
-          ))}
-        </div>
-      );
-    }
-    
+            <div className="flex justify-between items-center mt-3">
+              <div className="text-sm">
+                <span className="text-muted-foreground">Carbon Score:</span>{' '}
+                <span className="font-medium">{userData.carbon_total?.toFixed(1) || '0'} kg</span>
+              </div>
+              {userData.id !== user?.id && (
+                <Button variant="ghost" size="sm">
+                  <UserPlus className="h-4 w-4 mr-1" />
+                  Add
+                </Button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  // Fix: Properly render Table View content
+  const renderTableView = () => {
     return (
       <div className="rounded-md border">
         <Table>
@@ -225,6 +203,35 @@ export const UsersList = () => {
     );
   };
 
+  // Fix: Render loading and error states
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <div className="flex justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      );
+    }
+    
+    if (fetchError) {
+      return (
+        <div className="text-center py-8">
+          <p className="text-destructive mb-2">Error loading user data</p>
+          <p className="text-sm text-muted-foreground">{fetchError}</p>
+          <Button 
+            variant="outline" 
+            className="mt-4"
+            onClick={() => window.location.reload()}
+          >
+            Retry
+          </Button>
+        </div>
+      );
+    }
+    
+    return null;
+  };
+
   return (
     <Card className="w-full">
       <CardHeader>
@@ -242,8 +249,15 @@ export const UsersList = () => {
         </div>
       </CardHeader>
       <CardContent>
-        {/* Instead of conditional TabsContent, we'll use a single render function */}
-        {renderContent()}
+        {/* Fix: Use Tabs and TabsContent properly */}
+        <Tabs value={view} onValueChange={(v) => setView(v as "grid" | "table")}>
+          <TabsContent value="grid">
+            {loading || fetchError ? renderContent() : renderGridView()}
+          </TabsContent>
+          <TabsContent value="table">
+            {loading || fetchError ? renderContent() : renderTableView()}
+          </TabsContent>
+        </Tabs>
       </CardContent>
     </Card>
   );

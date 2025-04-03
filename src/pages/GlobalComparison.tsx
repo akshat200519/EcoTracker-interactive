@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -17,6 +18,28 @@ type UserRanking = {
   total_carbon: number;
   ranking: number;
 };
+
+// Sample users for demonstration
+const SAMPLE_USERS: UserRanking[] = [
+  {
+    user_id: 'sample-user-1',
+    user_name: 'Eco Sarah',
+    total_carbon: 175.5,
+    ranking: 0 // Will be set dynamically
+  },
+  {
+    user_id: 'sample-user-2',
+    user_name: 'Green Mike',
+    total_carbon: 320.8,
+    ranking: 0 // Will be set dynamically
+  },
+  {
+    user_id: 'sample-user-3',
+    user_name: 'Sustainable Alex',
+    total_carbon: 145.2,
+    ranking: 0 // Will be set dynamically
+  }
+];
 
 const GlobalComparison = () => {
   const { user, profile, isAuthenticated } = useAuth();
@@ -63,8 +86,8 @@ const GlobalComparison = () => {
 
         console.log("Profiles data fetched:", profilesData?.length || 0, "records");
         
-        // Set the user count
-        setUserCount(profilesData?.length || 0);
+        // Set the user count plus our sample users
+        setUserCount((profilesData?.length || 0) + SAMPLE_USERS.length);
         
         // Create a map of user IDs to names for quick lookup
         const userNameMap: Record<string, string | null> = {};
@@ -99,6 +122,14 @@ const GlobalComparison = () => {
             };
           });
         }
+        
+        // Add sample users to the user totals
+        SAMPLE_USERS.forEach(sampleUser => {
+          userTotals[sampleUser.user_id] = {
+            total: sampleUser.total_carbon,
+            name: sampleUser.user_name
+          };
+        });
         
         // Convert to array and sort by carbon impact (lower is better)
         const rankings = Object.entries(userTotals)

@@ -118,6 +118,113 @@ export const UsersList = () => {
     });
   };
 
+  const renderContent = () => {
+    if (loading) {
+      return (
+        <div className="flex justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      );
+    }
+    
+    if (fetchError) {
+      return (
+        <div className="text-center py-8">
+          <p className="text-destructive mb-2">Error loading user data</p>
+          <p className="text-sm text-muted-foreground">{fetchError}</p>
+          <Button 
+            variant="outline" 
+            className="mt-4"
+            onClick={() => window.location.reload()}
+          >
+            Retry
+          </Button>
+        </div>
+      );
+    }
+    
+    if (view === "grid") {
+      return (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {users.map((userData) => (
+            <div 
+              key={userData.id} 
+              className={`p-4 rounded-lg border ${userData.id === user?.id ? 'bg-secondary/10 border-primary/20' : ''}`}
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <Avatar className="h-10 w-10">
+                  <AvatarFallback>{userData.name?.[0] || 'U'}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-medium">
+                    {userData.name || 'Anonymous User'}
+                    {userData.id === user?.id && (
+                      <span className="ml-2 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">You</span>
+                    )}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Joined {formatDate(userData.created_at)}</p>
+                </div>
+              </div>
+              <div className="flex justify-between items-center mt-3">
+                <div className="text-sm">
+                  <span className="text-muted-foreground">Carbon Score:</span>{' '}
+                  <span className="font-medium">{userData.carbon_total?.toFixed(1) || '0'} kg</span>
+                </div>
+                {userData.id !== user?.id && (
+                  <Button variant="ghost" size="sm">
+                    <UserPlus className="h-4 w-4 mr-1" />
+                    Add
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    
+    return (
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>User</TableHead>
+              <TableHead>Joined</TableHead>
+              <TableHead className="text-right">Carbon Score</TableHead>
+              <TableHead></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {users.map((userData) => (
+              <TableRow key={userData.id}>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback>{userData.name?.[0] || 'U'}</AvatarFallback>
+                    </Avatar>
+                    <span>{userData.name || 'Anonymous User'}</span>
+                    {userData.id === user?.id && (
+                      <span className="ml-1 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">You</span>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>{formatDate(userData.created_at)}</TableCell>
+                <TableCell className="text-right">{userData.carbon_total?.toFixed(1) || '0'} kg</TableCell>
+                <TableCell>
+                  {userData.id !== user?.id && (
+                    <Button variant="ghost" size="sm">
+                      <UserPlus className="h-4 w-4" />
+                    </Button>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    );
+  };
+
   return (
     <Card className="w-full">
       <CardHeader>
@@ -135,104 +242,8 @@ export const UsersList = () => {
         </div>
       </CardHeader>
       <CardContent>
-        {loading ? (
-          <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        ) : fetchError ? (
-          <div className="text-center py-8">
-            <p className="text-destructive mb-2">Error loading user data</p>
-            <p className="text-sm text-muted-foreground">{fetchError}</p>
-            <Button 
-              variant="outline" 
-              className="mt-4"
-              onClick={() => window.location.reload()}
-            >
-              Retry
-            </Button>
-          </div>
-        ) : (
-          <>
-            <TabsContent value="grid" className="mt-0">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {users.map((userData) => (
-                  <div 
-                    key={userData.id} 
-                    className={`p-4 rounded-lg border ${userData.id === user?.id ? 'bg-secondary/10 border-primary/20' : ''}`}
-                  >
-                    <div className="flex items-center gap-3 mb-3">
-                      <Avatar className="h-10 w-10">
-                        <AvatarFallback>{userData.name?.[0] || 'U'}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium">
-                          {userData.name || 'Anonymous User'}
-                          {userData.id === user?.id && (
-                            <span className="ml-2 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">You</span>
-                          )}
-                        </p>
-                        <p className="text-xs text-muted-foreground">Joined {formatDate(userData.created_at)}</p>
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center mt-3">
-                      <div className="text-sm">
-                        <span className="text-muted-foreground">Carbon Score:</span>{' '}
-                        <span className="font-medium">{userData.carbon_total?.toFixed(1) || '0'} kg</span>
-                      </div>
-                      {userData.id !== user?.id && (
-                        <Button variant="ghost" size="sm">
-                          <UserPlus className="h-4 w-4 mr-1" />
-                          Add
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="table" className="mt-0">
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>User</TableHead>
-                      <TableHead>Joined</TableHead>
-                      <TableHead className="text-right">Carbon Score</TableHead>
-                      <TableHead></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {users.map((userData) => (
-                      <TableRow key={userData.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-8 w-8">
-                              <AvatarFallback>{userData.name?.[0] || 'U'}</AvatarFallback>
-                            </Avatar>
-                            <span>{userData.name || 'Anonymous User'}</span>
-                            {userData.id === user?.id && (
-                              <span className="ml-1 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">You</span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>{formatDate(userData.created_at)}</TableCell>
-                        <TableCell className="text-right">{userData.carbon_total?.toFixed(1) || '0'} kg</TableCell>
-                        <TableCell>
-                          {userData.id !== user?.id && (
-                            <Button variant="ghost" size="sm">
-                              <UserPlus className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </TabsContent>
-          </>
-        )}
+        {/* Instead of conditional TabsContent, we'll use a single render function */}
+        {renderContent()}
       </CardContent>
     </Card>
   );

@@ -28,7 +28,7 @@ type ExtendedDatabase = Database & {
   };
 };
 
-// Initialize Supabase client with authentication persistence options
+// Initialize Supabase client with proper session management
 export const supabase = createClient<ExtendedDatabase>(
   SUPABASE_URL, 
   SUPABASE_PUBLISHABLE_KEY,
@@ -37,6 +37,13 @@ export const supabase = createClient<ExtendedDatabase>(
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
+      storage: localStorage // Explicitly use localStorage for session persistence
     }
   }
 );
+
+// Add a helper function to check if a session is active
+export const isSessionActive = async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  return !!session;
+};

@@ -30,11 +30,13 @@ export const UsersList = () => {
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"grid" | "table">("grid");
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchUsers = async () => {
       try {
         setLoading(true);
+        setFetchError(null);
         console.log("Fetching all user profiles...");
         
         // Fetch all user profiles without filtering
@@ -45,6 +47,7 @@ export const UsersList = () => {
           
         if (error) {
           console.error("Error fetching profiles:", error);
+          setFetchError(error.message);
           throw error;
         }
         
@@ -58,6 +61,7 @@ export const UsersList = () => {
           
         if (carbonError) {
           console.error("Error fetching carbon logs:", carbonError);
+          // Don't throw error here - we can still show user profiles without carbon data
         }
         
         console.log(`Fetched ${carbonData?.length || 0} carbon log entries`);
@@ -74,7 +78,7 @@ export const UsersList = () => {
         });
         
         // If no carbon data, generate sample data for demonstration
-        if (!carbonData || carbonData.length === 0 && profilesData && profilesData.length > 0) {
+        if ((!carbonData || carbonData.length === 0) && profilesData && profilesData.length > 0) {
           console.log("No carbon data found, generating sample data");
           profilesData.forEach(profile => {
             userCarbonTotals[profile.id] = Math.floor(Math.random() * 500) + 100;
@@ -89,11 +93,12 @@ export const UsersList = () => {
         
         console.log(`Processed ${usersWithCarbonData.length} users with carbon data`);
         setUsers(usersWithCarbonData);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error fetching users:", error);
+        setFetchError(error.message || "Failed to load user data");
         toast({
           title: "Error loading users",
-          description: "Could not load user data",
+          description: error.message || "Could not load user data",
           variant: "destructive"
         });
       } finally {
@@ -133,6 +138,18 @@ export const UsersList = () => {
         {loading ? (
           <div className="flex justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        ) : fetchError ? (
+          <div className="text-center py-8">
+            <p className="text-destructive mb-2">Error loading user data</p>
+            <p className="text-sm text-muted-foreground">{fetchError}</p>
+            <Button 
+              variant="outline" 
+              className="mt-4"
+              onClick={() => window.location.reload()}
+            >
+              Retry
+            </Button>
           </div>
         ) : (
           <>

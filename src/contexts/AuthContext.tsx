@@ -152,32 +152,45 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = async () => {
     try {
       console.log("Logging out...");
-      const { error } = await supabase.auth.signOut();
       
-      if (error) {
-        throw error;
-      }
-      
-      // Explicitly clear the state
+      // First explicitly clear the state to avoid any dependencies on it during signOut
       setUser(null);
       setSession(null);
       setProfile(null);
+      
+      // Then attempt to sign out
+      const { error } = await supabase.auth.signOut({
+        scope: 'local' // Only clear local storage, not server session
+      });
+      
+      if (error) {
+        // If there's an error, log it but don't throw - we still want to complete the logout
+        console.error("Logout API error:", error);
+      }
       
       toast({
         title: "Logged out successfully",
         description: "You have been logged out of your account."
       });
 
-      // Force page refresh to clear any cached state
-      window.location.href = '/';
+      // Use setTimeout to ensure state updates complete before redirecting
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 100);
       
     } catch (error: any) {
       console.error("Logout error:", error);
+      
+      // Even if there's an error, we still want to clear the local state and redirect
       toast({
-        title: "Logout failed",
-        description: error.message || "An error occurred during logout.",
-        variant: "destructive"
+        title: "Logout completed",
+        description: "You have been logged out, but there was a server error."
       });
+      
+      // Redirect regardless of error
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 100);
     }
   };
 

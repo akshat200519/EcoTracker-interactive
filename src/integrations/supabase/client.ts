@@ -37,7 +37,8 @@ export const supabase = createClient<ExtendedDatabase>(
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
-      storage: localStorage // Explicitly use localStorage for session persistence
+      storage: localStorage, // Explicitly use localStorage for session persistence
+      flowType: 'implicit' // Add explicit flow type for better compatibility
     }
   }
 );

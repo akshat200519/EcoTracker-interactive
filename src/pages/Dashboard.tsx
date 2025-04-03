@@ -26,9 +26,9 @@ const Dashboard = () => {
     return null;
   }
   
-  const handleLogout = () => {
-    logout();
-    navigate("/");
+  const handleLogout = async () => {
+    await logout();
+    // Navigation is now handled inside the logout function
   };
 
   const handleActivityUpdate = () => {

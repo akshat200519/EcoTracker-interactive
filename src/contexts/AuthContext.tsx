@@ -2,7 +2,7 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { User } from "@supabase/supabase-js";
+import { User, Session } from "@supabase/supabase-js";
 import { Tables } from "@/integrations/supabase/schema";
 
 interface AuthContextType {
@@ -31,6 +31,7 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Tables['profiles'] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
@@ -56,36 +57,42 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   useEffect(() => {
-    // Set up auth state listener
+    // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setUser(session?.user ?? null);
+      (event, currentSession) => {
+        console.log("Auth state change:", event, currentSession);
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
         
-        if (session?.user) {
-          const profileData = await fetchProfile(session.user.id);
-          setProfile(profileData);
+        // Use setTimeout to prevent potential deadlocks with Supabase client
+        if (currentSession?.user) {
+          setTimeout(() => {
+            fetchProfile(currentSession.user.id).then(profileData => {
+              setProfile(profileData);
+              setIsLoading(false);
+            });
+          }, 0);
         } else {
           setProfile(null);
+          setIsLoading(false);
         }
-        
-        setIsLoading(false);
       }
     );
 
-    // Check for existing session
-    const initializeAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
+    // Then check for existing session
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
       
-      if (session?.user) {
-        const profileData = await fetchProfile(session.user.id);
-        setProfile(profileData);
+      if (currentSession?.user) {
+        fetchProfile(currentSession.user.id).then(profileData => {
+          setProfile(profileData);
+          setIsLoading(false);
+        });
+      } else {
+        setIsLoading(false);
       }
-      
-      setIsLoading(false);
-    };
-
-    initializeAuth();
+    });
 
     return () => {
       subscription.unsubscribe();
@@ -144,13 +151,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = async () => {
     try {
-      await supabase.auth.signOut();
+      console.log("Logging out...");
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Explicitly clear the state
       setUser(null);
+      setSession(null);
       setProfile(null);
+      
       toast({
         title: "Logged out successfully",
         description: "You have been logged out of your account."
       });
+
+      // Force page refresh to clear any cached state
+      window.location.href = '/';
+      
     } catch (error: any) {
       console.error("Logout error:", error);
       toast({

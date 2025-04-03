@@ -54,18 +54,27 @@ const FriendsComparison = () => {
     // Fetch all users from the database
     const fetchUsers = async () => {
       try {
+        console.log("Fetching all profiles for friends comparison");
+        
         const { data, error } = await supabase
           .from('profiles')
           .select('id, name');
           
-        if (error) throw error;
+        if (error) {
+          console.error("Error fetching profiles:", error);
+          throw error;
+        }
+        
+        console.log(`Fetched ${data?.length || 0} profiles`);
         
         // Filter out the current user
         const otherUsers = data?.filter(u => u.id !== user?.id) || [];
+        console.log(`Found ${otherUsers.length} other users (excluding current user)`);
+        
         setAllUsers(otherUsers);
         
         // For demo purposes, convert some users to friends with random carbon scores
-        const initialFriends = otherUsers.slice(0, 3).map(u => {
+        const initialFriends = otherUsers.slice(0, Math.min(3, otherUsers.length)).map(u => {
           const randomScore = Math.floor(Math.random() * 300) + 150;
           const randomComparison = Math.floor(Math.random() * 60) - 30;
           
@@ -77,6 +86,7 @@ const FriendsComparison = () => {
           };
         });
         
+        console.log(`Created ${initialFriends.length} initial friends`);
         setFriendsList(initialFriends);
       } catch (error) {
         console.error("Error fetching users:", error);

@@ -28,4 +28,15 @@ type ExtendedDatabase = Database & {
   };
 };
 
-export const supabase = createClient<ExtendedDatabase>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+// Initialize Supabase client with authentication persistence options
+export const supabase = createClient<ExtendedDatabase>(
+  SUPABASE_URL, 
+  SUPABASE_PUBLISHABLE_KEY,
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    }
+  }
+);

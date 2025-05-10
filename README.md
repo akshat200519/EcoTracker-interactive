@@ -102,25 +102,6 @@ docker-compose up
 
 ---
 
-## 📂 **Project Structure**
-
-\```
-greenpulse/
-├── data/
-├── models/
-├── app/
-│   ├── templates/
-│   ├── static/
-│   └── routes/
-├── tests/
-├── Dockerfile
-├── docker-compose.yml
-├── requirements.txt
-└── README.md
-\```
-
----
-
 ## 🌎 **Impact**
 
 ✅ **SDG Alignment:** Supports **Sustainable Development Goal 13 (Climate Action).**  
